@@ -13,7 +13,7 @@ def setup_logger(name: str = __name__) -> logging.Logger:
         Налаштований логер
     """
     logger = logging.getLogger(name)
-    logger.setLevel(settings.log_level)
+    logger.setLevel(settings.LOG_LEVEL)
 
     if not logger.handlers:
         handler = logging.StreamHandler()

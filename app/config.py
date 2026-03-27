@@ -1,31 +1,28 @@
 import os
-from pydantic_settings import BaseSettings
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-class Settings(BaseSettings):
-    """Конфігурація додатку з .env"""
+class Settings:
+    """Проста конфігурація через os.getenv (MVP Style)"""
 
     # Database
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
-
-    # API
-    api_port: int = int(os.getenv("API_PORT", 8000))
-    api_host: str = os.getenv("API_HOST", "127.0.0.1")
+    # Змінюємо database_url на шлях до файлу для sqlite3
+    DATABASE_PATH = os.getenv("DATABASE_PATH", "leads.db")
 
     # Scraper
-    scraper_timeout: int = int(os.getenv("SCRAPER_TIMEOUT", 30))
-    scraper_retries: int = int(os.getenv("SCRAPER_RETRIES", 3))
+    SCRAPER_TIMEOUT = int(os.getenv("SCRAPER_TIMEOUT", 30))
+    SCRAPER_RETRIES = int(os.getenv("SCRAPER_RETRIES", 3))
 
     # Webhook
-    webhook_url: str = os.getenv("WEBHOOK_URL", "")
-    webhook_batch_size: int = int(os.getenv("WEBHOOK_BATCH_SIZE", 10))
+    WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+    WEBHOOK_BATCH_SIZE = int(os.getenv("WEBHOOK_BATCH_SIZE", default=10))
 
     # Logger
-    log_level: str = os.getenv("LOG_LEVEL", "INFO")
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 
+# Створюємо екземпляр для імпорту в інші модулі
 settings = Settings()
