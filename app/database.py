@@ -17,17 +17,18 @@ def get_db_connection():
 
 
 def init_db():
-    """Ініціалізація таблиці з коректною типізацією SQLite"""
     query = """
     CREATE TABLE IF NOT EXISTS leads_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         payload TEXT NOT NULL,
         status VARCHAR(20) DEFAULT 'pending',
         retry_count INTEGER DEFAULT 0,
-        -- Гарантуємо тип INTEGER через CAST для Unix Timestamp
         next_retry_at INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER))
     );
     """
-    with get_db_connection() as conn:
-        conn.execute(query)
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            conn.execute(query)
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"DB Initialization Error: {e}")
