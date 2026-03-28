@@ -19,7 +19,8 @@ class Settings:
     # Webhook
     WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
     WEBHOOK_BATCH_SIZE = int(os.getenv("WEBHOOK_BATCH_SIZE", default=10))
-
+    # Додаємо зчитування токена
+    MAKE_API_KEY = os.getenv("MAKE_LEED_KEY", "")
     # Logger
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 

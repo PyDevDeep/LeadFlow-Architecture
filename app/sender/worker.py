@@ -1,5 +1,6 @@
 import json
 import random
+import re
 import sqlite3
 import time
 from typing import Any
@@ -8,6 +9,31 @@ import requests
 
 from app.config import settings
 from app.database import get_db_connection
+
+# Чорний список сміттєвих слів (у нижньому регістрі для порівняння)
+JUNK_NAMES = {"home", "welcome", "untitled", "index", "test"}
+
+
+def clean_company_name(name: str) -> str | None:
+    """Очищає назву компанії та повертає None, якщо вона не пройшла валідацію."""
+    if not name:
+        return None
+
+    # Sanitization: видаляємо поширені суфікси (Inc, LLC тощо) незалежно від регістру
+    cleaned = re.sub(r"(?i)\b(inc\.?|llc|ltd\.?|corp\.?)\b", "", name)
+
+    # Видаляємо множинні пробіли та обрізаємо краї
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    # Length Check: відсіюємо занадто короткі або довгі назви
+    if not (2 <= len(cleaned) <= 50):
+        return None
+
+    # Junk Filter: перевірка на повний збіг зі сміттєвими словами
+    if cleaned.lower() in JUNK_NAMES:
+        return None
+
+    return cleaned
 
 
 def process_batch() -> None:
@@ -28,7 +54,11 @@ def process_batch() -> None:
 
         domain = payload.get("domain")
 
-        if not domain:
+        # ЗАСТОСУВАННЯ ФІЛЬТРА
+        valid_name = clean_company_name(payload.get("name", ""))
+
+        # Відсіюємо записи без домену або з некоректною назвою компанії
+        if not domain or not valid_name:
             update_lead_status(lead["id"], "invalid_data")
             continue
 
@@ -39,21 +69,39 @@ def process_batch() -> None:
         unique_domains.add(domain)
         unique_leads.append(lead)
 
-        # Жорсткий маппінг
-        formatted_payload = {
+        # Формуємо фінальний об'єкт з уже очищеною назвою (valid_name)
+        formatted_payload: dict[str, Any] = {
             "db_id": lead["id"],
             "domain": domain,
-            "name": payload.get("name", ""),
+            "name": valid_name,
             "website": payload.get("website", ""),
             "phone": payload.get("phone", ""),
         }
         payloads_to_send.append(formatted_payload)
 
+    # ВИПРАВЛЕНО ВІДСТУПИ: винесено за межі циклу for
+    if not payloads_to_send:
+        return
+
+    # Формуємо заголовки для авторизації на make.com
+    headers = {
+        "x-make-apikey": settings.MAKE_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    final_payload: dict[str, Any] = {
+        "leads": payloads_to_send,
+        "batch_meta": {"count": len(payloads_to_send), "source": "scraper_v1"},
+    }
+
     try:
         response = requests.post(
-            settings.WEBHOOK_URL, json=payloads_to_send, timeout=30
+            settings.WEBHOOK_URL,
+            json=final_payload,  # <--- ВІДПРАВЛЯЄМО ОНОВЛЕНУ СТРУКТУРУ
+            headers=headers,
+            timeout=30,
         )
-        response.raise_for_status()  # Викидає HTTPError для 4xx та 5xx
+        response.raise_for_status()
 
         # Якщо все ок:
         for lead in unique_leads:
