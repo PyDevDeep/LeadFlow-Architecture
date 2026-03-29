@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]([INSERT CI URL])
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
 **LeadFlow Architecture** is a professional lead generation tool designed to automate the full pipeline — from data scraping to CRM integration via Webhooks and Make.com.
 
@@ -112,27 +112,27 @@ A ready-to-use blueprint is available in the `/automation` directory.
 
 ## 🖼 Pipeline Overview
 
-See: automation/Scenario_IMG.jpg
+![Pipeline Overview](automation/Scenario_IMG.jpg)
 
 ---
 
 ## 📂 Project Structure
 
+```text
 .
 ├── app/
-│   ├── scraper/
-│   ├── sender/
-│   ├── utils/
-│   ├── config.py
-│   └── database.py
-├── automation/
+│   ├── scraper/          # Scraping modules (client, parser, logic)
+│   ├── sender/           # Webhook sending logic
+│   ├── utils/            # Utilities and logging
+│   ├── config.py         # Environment configuration
+│   └── database.py       # Database interaction layer
+├── automation/           # Make.com blueprints and assets
 │   ├── Make.json
 │   └── Scenario_IMG.jpg
-├── main.py
-└── requirements.txt
-
+├── main.py               # CLI entry point
+└── requirements.txt      # Project dependencies
 ---
-
+```
 ## 🤝 Contributing
 
 Contributions are welcome:
