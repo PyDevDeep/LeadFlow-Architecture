@@ -1,82 +1,145 @@
-# MAKE LEED GEN
+# LeadFlow Architecture 🚀
 
-Додаток для скрейпінгу та обробки LEED даних з подальшою відправкою на Webhook.
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]([INSERT CI URL])
 
-## Встановлення
+**LeadFlow Architecture** is a professional lead generation tool designed to automate the full pipeline — from data scraping to CRM integration via Webhooks and Make.com.
 
-1. Клонуй репозиторій
-2. Встанови залежності:
-   ```bash
-   pip install -r requirements.txt
-   ```
+This project is intended for developers and marketing teams who want to streamline lead collection and outreach workflows.
 
-3. Скопіюй `.env.example` в `.env` та налаштуй:
-   ```bash
-   cp .env.example .env
-   ```
+---
 
-4. Ініціалізуй базу даних:
-   ```bash
-   python main.py init
-   ```
+## ✨ Features
 
-## Використання
+- **Automated Scraping**  
+  Extract leads from target websites using a built-in scraper.
 
-### Скрейпити дані
-```bash
+- **Data Management**  
+  Local SQLite storage for efficient processing and tracking.
+
+- **Webhook Integration**  
+  Send processed data to external services (Make.com, Zapier, etc.).
+
+- **Outreach Pipeline**  
+  Integrates with Airtable, OpenAI, Hunter, and Instantly.
+
+- **Reliability & Error Handling**  
+  Built-in error handling with “Break” directives.
+
+- **Configurable Logging**  
+  Flexible logging levels (DEBUG, INFO, ERROR).
+
+---
+
+## 🛠 Tech Stack
+
+*   **Language**: [Python 3.x](https://www.python.org/)
+*   **Database**: SQLite
+*   **Testing**: [Pytest](https://docs.pytest.org/)
+*   **Automation**: [Make.com](https://www.make.com/)
+*   **Integrations**: Airtable, OpenAI, Hunter, Instantly
+
+---
+
+## 📦 Installation
+
+### 1. Clone Repository
+
+git clone https://github.com/PyDevDeep/LeadFlow-Architecture.git
+cd LeadFlow-Architecture
+
+### 2. Setup Environment
+
+pip install -r requirements.txt
+cp .env.example .env
+
+### 3. Initialize Database
+
+python main.py init
+
+---
+
+## 🚀 Usage
+
+### 🔍 Scrape Data
+
 python main.py scrape --url https://example.com
-```
 
-### Відправити дані на Webhook
-```bash
+### 📤 Send Data
+
 python main.py send
-```
 
-## Архітектура
+### 🧪 Run Tests
 
-Див. [architecture.md](architecture.md)
-
-## Конфігурація
-
-Усі параметри у `.env`:
-- `DATABASE_URL` - Підключення до БД
-- `WEBHOOK_URL` - URL для відправки
-- `SCRAPER_TIMEOUT` - Timeout для HTTP запитів
-- `WEBHOOK_BATCH_SIZE` - Розмір батчу для відправки
-
-## Структура проекту
-
-```
-./
-    README.md
-    architecture.md
-    main.py
-    requirements.txt
-    app/
-        __init__.py
-        config.py
-        database.py
-        models.py
-        scraper/
-            __init__.py
-            client.py
-            parser.py
-        sender/
-            __init__.py
-            worker.py
-        utils/
-            logger.py
-```
-
-## Розробка
-
-Запуск тестів:
-```bash
 pytest
-```
 
-Форматування коду:
-```bash
-black .
-isort .
-```
+---
+
+## ⚙️ Configuration
+
+All configuration is managed via the `.env` file:
+
+- DATABASE_PATH — Path to SQLite database  
+- SCRAPER_TIMEOUT — Request timeout  
+- WEBHOOK_URL — Webhook destination  
+- WEBHOOK_BATCH_SIZE — Batch size for sending  
+- LOG_LEVEL — Logging level  
+
+---
+
+## 🤖 Make.com Automation
+
+A ready-to-use blueprint is available in the `/automation` directory.
+
+### Setup Steps
+
+1. Download `Make.json` or `outreach_pipeline.json`
+2. Create a new scenario in Make.com
+3. Select **Import Blueprint**
+4. Configure integrations:
+   - Airtable
+   - OpenAI
+   - Hunter
+   - Instantly
+5. Map fields:
+   - YOUR_FIELD_ID_DOMAIN
+   - YOUR_FIELD_ID_EMAIL
+   - YOUR_FIELD_ID_COMPANY_NAME
+   - YOUR_FIELD_ID_AI_RESPONSE
+
+---
+
+## 🖼 Pipeline Overview
+
+See: automation/Scenario_IMG.jpg
+
+---
+
+## 📂 Project Structure
+
+.
+├── app/
+│   ├── scraper/
+│   ├── sender/
+│   ├── utils/
+│   ├── config.py
+│   └── database.py
+├── automation/
+│   ├── Make.json
+│   └── Scenario_IMG.jpg
+├── main.py
+└── requirements.txt
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome:
+
+1. Fork the repository  
+2. Create a feature branch  
+3. Commit your changes  
+4. Submit a Pull Request  
+
+---
