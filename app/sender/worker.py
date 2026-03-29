@@ -1,4 +1,3 @@
-import json
 import random
 import sqlite3
 import time
@@ -9,7 +8,6 @@ import requests
 from app.config import settings
 from app.database import get_db_connection
 from app.utils.logger import logger
-from app.utils.validators import clean_company_name
 
 
 def process_batch() -> None:
@@ -19,42 +17,18 @@ def process_batch() -> None:
         logger.info("Черга порожня.")
         return
 
-    unique_domains: set[str] = set()
-    unique_leads: list[dict[str, Any]] = []
     payloads_to_send: list[dict[str, Any]] = []
 
+    # Дані вже валідовані та дедупліковані в БД. Просто формуємо JSON.
     for lead in leads:
-        try:
-            payload = json.loads(lead["payload"])
-        except json.JSONDecodeError:
-            update_lead_status(lead["id"], "invalid_data")
-            continue
-
-        domain = payload.get("domain")
-        valid_name = clean_company_name(payload.get("name", ""))
-
-        if not domain or not valid_name:
-            update_lead_status(lead["id"], "invalid_data")
-            continue
-
-        if domain in unique_domains:
-            update_lead_status(lead["id"], "duplicate")
-            continue
-
-        unique_domains.add(domain)
-        unique_leads.append(lead)
-
         formatted_payload: dict[str, Any] = {
             "db_id": lead["id"],
-            "domain": domain,
-            "name": valid_name,
-            "website": payload.get("website", ""),
-            "phone": payload.get("phone", ""),
+            "domain": lead["domain"],
+            "name": lead["name"],
+            "website": lead["website"],
+            "phone": lead["phone"],
         }
         payloads_to_send.append(formatted_payload)
-
-    if not payloads_to_send:
-        return
 
     headers = {
         "x-make-apikey": settings.MAKE_API_KEY,
@@ -72,7 +46,7 @@ def process_batch() -> None:
         )
         response.raise_for_status()
 
-        for lead in unique_leads:
+        for lead in leads:
             update_lead_status(lead["id"], "success")
         logger.info(f"Успішно відправлено батч з {len(payloads_to_send)} лідів.")
 
@@ -81,14 +55,14 @@ def process_batch() -> None:
         logger.error(f"HTTP помилка при відправці: {status}")
 
         if status in [429, 500, 502, 503, 504]:
-            handle_retry(unique_leads)
+            handle_retry(leads)
         else:
-            for lead in unique_leads:
+            for lead in leads:
                 update_lead_status(lead["id"], "failed")
 
     except requests.RequestException as e:
         logger.error(f"Мережева помилка (Таймаут/З'єднання): {e}")
-        handle_retry(unique_leads)
+        handle_retry(leads)
 
     except Exception as e:
         logger.critical(f"Критична помилка воркера: {e}", exc_info=True)
@@ -145,6 +119,7 @@ def update_lead_status(
 def get_leads_for_processing(batch_size: int = 50) -> list[dict[str, Any]]:
     current_time = int(time.time())
 
+    # Змінено SQL-запит: замість payload дістаємо конкретні колонки
     query = """
         UPDATE leads_queue 
         SET status = 'processing' 
@@ -155,7 +130,7 @@ def get_leads_for_processing(batch_size: int = 50) -> list[dict[str, Any]]:
             ORDER BY id ASC 
             LIMIT ?
         )
-        RETURNING id, payload, retry_count;
+        RETURNING id, domain, name, website, phone, retry_count;
     """
     try:
         with get_db_connection() as conn:
