@@ -7,8 +7,11 @@ from app.utils.logger import logger
 
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(settings.DATABASE_PATH)
+    # Жорсткий таймаут для багатопотоковості
+    conn = sqlite3.connect(settings.DATABASE_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    # Вмикаємо Write-Ahead Logging для конкурентного доступу
+    conn.execute("pragma journal_mode=wal")
     try:
         yield conn
     finally:
