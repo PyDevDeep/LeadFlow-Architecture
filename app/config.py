@@ -15,14 +15,22 @@ class Settings:
     # Scraper
     SCRAPER_TIMEOUT = int(os.getenv("SCRAPER_TIMEOUT", 30))
     SCRAPER_RETRIES = int(os.getenv("SCRAPER_RETRIES", 3))
+    SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
 
     # Webhook
     WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
     WEBHOOK_BATCH_SIZE = int(os.getenv("WEBHOOK_BATCH_SIZE", default=10))
-    # Додаємо зчитування токена
     MAKE_API_KEY = os.getenv("MAKE_LEAD_KEY", "")
     # Logger
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+    # --- REGEX PROFILES ---
+    REGEX_PHONE_UA = r"(?:\+?380|0)\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}"
+    REGEX_PHONE_US = r"(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}"
+
+    # Активний патерн, який використовує ScrapeManager
+    ACTIVE_PHONE_REGEX = REGEX_PHONE_UA
+    JUNK_NAMES = {"home", "welcome", "untitled", "index", "test"}
 
 
 # Створюємо екземпляр для імпорту в інші модулі
