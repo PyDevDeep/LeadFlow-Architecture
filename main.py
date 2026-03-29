@@ -3,7 +3,7 @@ import argparse
 
 def main():
     """Основна функція для CLI"""
-    parser = argparse.ArgumentParser(description="MAKE LEED GEN - Scraper та Sender")
+    parser = argparse.ArgumentParser(description="MAKE LEAD GEN - Scraper та Sender")
     subparsers = parser.add_subparsers(dest="command", help="Команди")
 
     # scrape команда
