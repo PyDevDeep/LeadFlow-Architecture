@@ -53,3 +53,5 @@ htmlcov/
 *.log
 
 seed_test_data.py
+collect_context.pyw
+project_context.txt
