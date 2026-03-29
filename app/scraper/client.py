@@ -1,6 +1,7 @@
 import requests
 
 from app.config import settings
+from app.utils.logger import logger
 
 
 class RequestClient:
@@ -14,7 +15,6 @@ class RequestClient:
         # TODO: Інтеграція пулу проксі для обходу блокувань
 
     def fetch_page(self, url: str) -> str:
-        """Реалізація методу fetch_page(url)."""
         try:
             response = requests.get(
                 url, headers=self.headers, timeout=settings.SCRAPER_TIMEOUT
@@ -22,5 +22,5 @@ class RequestClient:
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
-            print(f"Network Error for {url}: {e}")
+            logger.error(f"Network Error for {url}: {e}")
             return ""

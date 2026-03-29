@@ -2,6 +2,7 @@ import sqlite3
 from contextlib import contextmanager
 
 from app.config import settings
+from app.utils.logger import logger
 
 
 @contextmanager
@@ -30,5 +31,6 @@ def init_db():
         with get_db_connection() as conn:
             conn.execute(query)
             conn.commit()
+            logger.info("Базу даних успішно ініціалізовано/перевірено.")
     except sqlite3.Error as e:
-        print(f"DB Initialization Error: {e}")
+        logger.error(f"DB Initialization Error: {e}", exc_info=True)
