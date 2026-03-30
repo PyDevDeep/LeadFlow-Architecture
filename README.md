@@ -134,13 +134,24 @@ python main.py send
 
 ---
 
-### 🧪 Run Tests
+### 🧪 Tests
 
 ```bash
-pytest
+# All tests with verbose output
+pytest tests/ -v
+
+# With coverage report
+pytest tests/ -v --cov=app --cov-report=term-missing
 ```
 
----
+| Module             | Coverage |
+|--------------------|----------|
+| `validators.py`    | 100%     |
+| `manager.py`       | 100%     |
+| `serper_client.py` | 100%     |
+| `worker.py`        | 100%     |
+| `database.py`      | 100%     |
+| **TOTAL**          | **100%** |
 
 ## ⚙️ Configuration
 
