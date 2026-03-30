@@ -34,6 +34,26 @@ class Settings:
     ACTIVE_PHONE_REGEX = REGEX_PHONE_UA
     JUNK_NAMES = {"home", "welcome", "untitled", "index", "test"}
 
+    # ЖОРСТКИЙ ЧОРНИЙ СПИСОК (Агрегатори, соцмережі, блоги)
+    DOMAIN_BLACKLIST = {
+        "medium.com",
+        "linkedin.com",
+        "dou.ua",
+        "clutch.co",
+        "designrush.com",
+        "sortlist.com",
+        "ahrefs.com",
+        "themanifest.com",
+        "goodfirms.co",
+        "upwork.com",
+        "facebook.com",
+        "instagram.com",
+        "twitter.com",
+        "github.com",
+        "techbehemoths.com",
+        "agencyvista.com",
+    }
+
 
 # Створюємо екземпляр для імпорту в інші модулі
 settings = Settings()

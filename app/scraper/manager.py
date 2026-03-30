@@ -28,6 +28,12 @@ class ScrapeManager:
         clean_url = url if url.startswith(("http://", "https://")) else f"http://{url}"
         return urlparse(clean_url).netloc.removeprefix("www.")
 
+    def _is_blacklisted(self, domain: str) -> bool:
+        """Перевіряє, чи містить домен заборонені слова з чорного списку"""
+        if not domain:
+            return True
+        return any(bad_domain in domain for bad_domain in settings.DOMAIN_BLACKLIST)
+
     def _extract_phone_from_text(self, text: str | None) -> str:
         if not text:
             return ""
@@ -80,6 +86,12 @@ class ScrapeManager:
 
         for place in places:
             domain = self._extract_domain(place.website or "")
+
+            # ФІЛЬТР ЧОРНОГО СПИСКУ
+            if self._is_blacklisted(domain):
+                logger.debug(f"[TRACE] Maps пропустив сміттєвий домен: {domain}")
+                continue
+
             name = clean_company_name(place.title)
             phone = clean_phone(place.phoneNumber or "")
 
@@ -98,6 +110,12 @@ class ScrapeManager:
 
         for item in organic_results:
             domain = self._extract_domain(item.link)
+
+            # ФІЛЬТР ЧОРНОГО СПИСКУ
+            if self._is_blacklisted(domain):
+                logger.debug(f"[TRACE] Search пропустив сміттєвий домен: {domain}")
+                continue
+
             raw_title = item.title.split("-")[0].split("|")[0].strip()[:49]
             name = clean_company_name(raw_title) or domain.split(".")[0].capitalize()
             phone = self._extract_phone_from_text(item.snippet)
@@ -121,20 +139,50 @@ class ScrapeManager:
             url = target.get("url", "")
             domain = self._extract_domain(url)
 
-            if not domain or domain in self.visited_domains:
+            logger.debug(f"[TRACE] Старт обробки: {domain}")
+
+            if not domain:
+                logger.debug(f"[TRACE] Смерть потоку (Пустий домен): {url}")
                 return
+
+            # НОВИЙ ЖОРСТКИЙ БЛОК: ЧОРНИЙ СПИСОК
+            if self._is_blacklisted(domain):
+                logger.debug(
+                    f"[TRACE] Смерть потоку (Домен у Чорному списку): {domain}"
+                )
+                return
+
+            if domain in self.visited_domains:
+                logger.debug(
+                    f"[TRACE] Смерть потоку (Внутрішній дублікат сесії): {domain}"
+                )
+                return
+
             self.visited_domains.add(domain)
 
-            raw_name = target.get("name") or domain.split(".")[0].capitalize()
-            name = clean_company_name(raw_name)
+            raw_title = (
+                (target.get("name") or "").split("-")[0].split("|")[0].strip()[:49]
+            )
+            name = clean_company_name(raw_title) or domain.split(".")[0].capitalize()
+
             if not name:
+                # ОЦЕ НАЙІМОВІРНІШИЙ ВБИВЦЯ
+                logger.debug(
+                    f"[TRACE] Смерть потоку (Неможливо згенерувати ім'я): {domain} з сирим '{raw_title}'"
+                )
                 return
 
+            logger.debug(f"[TRACE] Початок HTTP скрейпінгу: {domain}")
             scrape_resp = self.client.scrape(url)
             text_content = scrape_resp.markdown or scrape_resp.text
-            phone = self._extract_phone_from_text(text_content)
 
-            # Екстракція метаданих (Description або og:description)[cite: 6]
+            if not text_content:
+                logger.warning(
+                    f"[TRACE] Serper повернув пустий текст (можливо 500/403 помилка): {domain}"
+                )
+                return
+
+            phone = self._extract_phone_from_text(text_content)
             description = ""
             if scrape_resp.metadata:
                 description = (
@@ -143,6 +191,9 @@ class ScrapeManager:
                     or ""
                 )
 
+            logger.debug(
+                f"[TRACE] Передача в БД: {domain} | Phone: '{phone}' | Desc: '{description[:10]}...'"
+            )
             self._save_lead(domain, name, url, phone, description, source_method)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
