@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from app.config import settings
 from app.database import init_db
 from app.scraper.manager import ScrapeManager
 from app.sender.worker import process_batch
@@ -60,9 +61,13 @@ def main():
         elif args.command == "hybrid":
             # Спочатку отримуємо органіку, потім парсимо глибоко
             search_resp = manager.client.search(args.query)
+
+            # ОБРІЗАЄМО МАСИВ ПЕРЕД DEEP SCRAPE
+            organic_results = search_resp.organic[: settings.SERPER_MAX_RESULTS]
             targets = [
-                {"url": item.link, "name": item.title} for item in search_resp.organic
+                {"url": item.link, "name": item.title} for item in organic_results
             ]
+
             manager.run_deep_scrape(targets)
 
         elif args.command == "file":
@@ -73,8 +78,12 @@ def main():
             with open(args.filepath, "r", encoding="utf-8") as f:
                 urls = [line.strip() for line in f if line.strip()]
 
+            urls = urls[: settings.SERPER_MAX_RESULTS]
             targets = [{"url": url} for url in urls]
-            manager.run_deep_scrape(targets)
+            # Явно вказуємо, що джерело - file
+            manager.run_deep_scrape(
+                targets, source_method="file", max_workers=settings.SCRAPER_MAX_WORKERS
+            )
 
 
 if __name__ == "__main__":

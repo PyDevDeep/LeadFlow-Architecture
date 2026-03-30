@@ -26,6 +26,8 @@ def init_db():
         name VARCHAR(255) NOT NULL,
         website VARCHAR(255),
         phone VARCHAR(50),
+        description TEXT,          -- НОВЕ ПОЛЕ ДЛЯ СНІПЕТІВ
+        source_method VARCHAR(50), -- НОВЕ ПОЛЕ ДЛЯ ТИПУ СЦЕНАРІЮ (maps, search, hybrid, file)
         status VARCHAR(20) DEFAULT 'pending',
         retry_count INTEGER DEFAULT 0,
         next_retry_at INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER))

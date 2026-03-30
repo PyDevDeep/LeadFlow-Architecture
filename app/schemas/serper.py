@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -6,6 +8,7 @@ class SerperMapItem(BaseModel):
     address: str | None = None
     phoneNumber: str | None = None
     website: str | None = None
+    description: str | None = None
 
 
 class SerperSearchItem(BaseModel):
@@ -14,14 +17,15 @@ class SerperSearchItem(BaseModel):
     snippet: str | None = None
 
 
+class SerperScrapeResponse(BaseModel):
+    text: str | None = None
+    markdown: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
 class SerperMapsResponse(BaseModel):
     places: list[SerperMapItem] = []
 
 
 class SerperSearchResponse(BaseModel):
     organic: list[SerperSearchItem] = []
-
-
-class SerperScrapeResponse(BaseModel):
-    text: str | None = None
-    markdown: str | None = None
