@@ -37,7 +37,7 @@ def clean_company_name(name: str) -> str | None:
     """Очищення назви компанії. Повертає None при провалі валідації."""
     if not name:
         return None
-    cleaned = re.sub(r"(?i)\b(inc\.?|llc|ltd\.?|corp\.?)\b", "", name)
+    cleaned = re.sub(r"(?i)\b(inc|llc|ltd|corp)\b\.?", "", name)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
     if not (2 <= len(cleaned) <= 50):
