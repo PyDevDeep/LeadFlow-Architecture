@@ -43,8 +43,16 @@ class ScrapeManager:
         description: str,
         source_method: str,
     ) -> None:
-        """Оновлений метод збереження з описом та джерелом"""
+        """Оновлений метод збереження з жорстким фільтром якості ліда"""
+        # Базові структурні вимоги
         if not domain or not name:
+            return
+
+        # ЖОРСТКИЙ ФІЛЬТР ЯКОСТІ: Лід має сенс, лише якщо є телефон АБО опис
+        if not phone and not description:
+            # Використовуємо debug, щоб не спамити консоль мертвими лідами,
+            # але мати змогу їх відстежити при потребі
+            logger.debug(f"[DB] Лід відхилено (пустий телефон та опис): {domain}")
             return
 
         query = """
@@ -59,6 +67,8 @@ class ScrapeManager:
                 conn.commit()
                 if cursor.rowcount > 0:
                     logger.info(f"[DB] Новий лід ({source_method}): {domain}")
+                else:
+                    logger.info(f"[DB] Дублікат проігноровано базою: {domain}")
         except Exception as e:
             logger.error(f"[DB] Помилка збереження {domain}: {e}")
 
@@ -72,7 +82,7 @@ class ScrapeManager:
             domain = self._extract_domain(place.website or "")
             name = clean_company_name(place.title)
             phone = clean_phone(place.phoneNumber or "")
-            # Беремо опис з місця на карті[cite: 5]
+
             description = place.description or ""
 
             if domain and name:

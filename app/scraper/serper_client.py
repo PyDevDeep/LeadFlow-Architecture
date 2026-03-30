@@ -60,7 +60,7 @@ class SerperClient:
         payload: dict[str, Any] = {"url": url}
         try:
             response = requests.post(
-                self.SCRAPE_URL, headers=self.headers, json=payload, timeout=30
+                self.SCRAPE_URL, headers=self.headers, json=payload, timeout=60
             )
             response.raise_for_status()
             return SerperScrapeResponse.model_validate(response.json())
