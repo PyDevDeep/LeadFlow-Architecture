@@ -20,7 +20,7 @@ class ScrapeManager:
             self.phone_regex = re.compile(settings.ACTIVE_PHONE_REGEX)
         except re.error as e:
             logger.critical(f"Failed to compile ACTIVE_PHONE_REGEX: {e}")
-            raise SystemExit("Invalid regex in configuration.")
+            raise SystemExit("Invalid regex in configuration.") from e
 
     def _extract_domain(self, url: str) -> str:
         """Extract the bare domain (no www) from a URL."""
@@ -51,7 +51,7 @@ class ScrapeManager:
         description: str,
         source_method: str,
     ) -> None:
-        """Persist a lead to the DB, rejecting entries with no phone and no description."""
+        """Persist a lead to the DB, rejecting entries with no phone and no descript"""
         if not domain or not name:
             return
 
@@ -131,7 +131,9 @@ class ScrapeManager:
         max_workers: int = settings.SCRAPER_MAX_WORKERS,
     ) -> None:
         """Scrape a list of target URLs in parallel and save results as leads."""
-        logger.info(f"Starting Deep Scrape ({source_method}) for {len(targets)} targets")
+        logger.info(
+            f"Starting Deep Scrape ({source_method}) for {len(targets)} targets"
+        )
 
         def scrape_worker(target: dict[str, str]):
             url = target.get("url", "")
