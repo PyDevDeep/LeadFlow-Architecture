@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 
 from app.config import settings
@@ -26,7 +28,7 @@ class SerperClient:
 
     def maps(self, query: str) -> SerperMapsResponse:
         """Пошук по Google Maps. Повертає локальні бізнеси з телефонами."""
-        payload = {"q": query}
+        payload: dict[str, Any] = {"q": query, "num": settings.SERPER_MAX_RESULTS}
         try:
             response = requests.post(
                 f"{self.BASE_URL}/maps", headers=self.headers, json=payload, timeout=15
@@ -39,7 +41,7 @@ class SerperClient:
 
     def search(self, query: str) -> SerperSearchResponse:
         """Органічна видача. Використовувати для генерації посилань."""
-        payload = {"q": query}
+        payload: dict[str, Any] = {"q": query, "num": settings.SERPER_MAX_RESULTS}
         try:
             response = requests.post(
                 f"{self.BASE_URL}/search",
@@ -55,7 +57,7 @@ class SerperClient:
 
     def scrape(self, url: str) -> SerperScrapeResponse:
         """Витягування контенту зі сторінки."""
-        payload = {"url": url}
+        payload: dict[str, Any] = {"url": url}
         try:
             response = requests.post(
                 self.SCRAPE_URL, headers=self.headers, json=payload, timeout=30

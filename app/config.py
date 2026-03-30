@@ -16,7 +16,9 @@ class Settings:
     SCRAPER_TIMEOUT = int(os.getenv("SCRAPER_TIMEOUT", 30))
     SCRAPER_RETRIES = int(os.getenv("SCRAPER_RETRIES", 3))
     SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
-
+    # Ліміти та потоки
+    SCRAPER_MAX_WORKERS = int(os.getenv("SCRAPER_MAX_WORKERS", 3))
+    SERPER_MAX_RESULTS = int(os.getenv("SERPER_MAX_RESULTS", 5))
     # Webhook
     WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
     WEBHOOK_BATCH_SIZE = int(os.getenv("WEBHOOK_BATCH_SIZE", default=10))
