@@ -27,6 +27,8 @@ def process_batch() -> None:
             "name": lead["name"],
             "website": lead["website"],
             "phone": lead["phone"],
+            "description": lead["description"],  # <--- ДОДАНО
+            "source_method": lead["source_method"],  # <--- ДОДАНО
         }
         payloads_to_send.append(formatted_payload)
 
@@ -119,7 +121,7 @@ def update_lead_status(
 def get_leads_for_processing(batch_size: int = 50) -> list[dict[str, Any]]:
     current_time = int(time.time())
 
-    # Змінено SQL-запит: замість payload дістаємо конкретні колонки
+    # Додано description та source_method у RETURNING
     query = """
         UPDATE leads_queue 
         SET status = 'processing' 
@@ -130,7 +132,7 @@ def get_leads_for_processing(batch_size: int = 50) -> list[dict[str, Any]]:
             ORDER BY id ASC 
             LIMIT ?
         )
-        RETURNING id, domain, name, website, phone, retry_count;
+        RETURNING id, domain, name, website, phone, description, source_method, retry_count;
     """
     try:
         with get_db_connection() as conn:
