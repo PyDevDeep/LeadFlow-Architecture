@@ -1,8 +1,8 @@
 # LeadFlow Architecture 🚀
 
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.14+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![CI](https://github.com/PyDevDeep/LeadFlow-Architecture/actions/workflows/ci.yml/badge.svg)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 **LeadFlow Architecture** is a professional lead generation tool that automates the full pipeline — from data scraping to CRM integration via Webhooks and Make.com.
@@ -21,6 +21,7 @@ Built for developers and marketing teams who need to streamline lead collection 
 - **Reliability & Error Handling** — Break directives with automatic retry on API failures.
 - **Lead Deduplication** — Built-in filters prevent duplicate records and skip leads without emails.
 - **Configurable Logging** — Flexible log levels: `DEBUG`, `INFO`, `ERROR`.
+- **CI Pipeline** — Automated linting (Ruff), type checking (Pyright), and tests on every push.
 
 ---
 
@@ -28,8 +29,11 @@ Built for developers and marketing teams who need to streamline lead collection 
 
 | Layer | Technology |
 |---|---|
-| Language | [Python 3.8+](https://www.python.org/) |
+| Language | [Python 3.14+](https://www.python.org/) |
 | Database | SQLite |
+| Validation | [Pydantic v2](https://docs.pydantic.dev/) |
+| Linting | [Ruff](https://docs.astral.sh/ruff/) |
+| Type Checking | [Pyright](https://github.com/microsoft/pyright) |
 | Testing | [Pytest](https://docs.pytest.org/) |
 | Automation | [Make.com](https://www.make.com/) |
 | Integrations | Airtable · OpenAI · Hunter.io · Instantly |
@@ -48,7 +52,7 @@ cd LeadFlow-Architecture
 ### 2. Set Up the Environment
 
 ```bash
-pip install -r requirements.txt
+pip install ".[dev]"
 cp .env.example .env
 ```
 
@@ -134,24 +138,13 @@ python main.py send
 
 ---
 
-### 🧪 Tests
+### 🧪 Run Tests
 
 ```bash
-# All tests with verbose output
-pytest tests/ -v
-
-# With coverage report
-pytest tests/ -v --cov=app --cov-report=term-missing
+pytest tests/test_suite.py
 ```
 
-| Module             | Coverage |
-|--------------------|----------|
-| `validators.py`    | 100%     |
-| `manager.py`       | 100%     |
-| `serper_client.py` | 100%     |
-| `worker.py`        | 100%     |
-| `database.py`      | 100%     |
-| **TOTAL**          | **100%** |
+---
 
 ## ⚙️ Configuration
 
@@ -160,10 +153,33 @@ All settings are managed via the `.env` file. Copy `.env.example` and fill in th
 | Variable | Description |
 |---|---|
 | `DATABASE_PATH` | Path to the SQLite database file |
-| `SCRAPER_TIMEOUT` | HTTP request timeout (seconds) |
+| `LOG_LEVEL` | Logging verbosity (`DEBUG` / `INFO` / `ERROR`) |
+| `SERPER_API_KEY` | API key for Serper.dev (search & maps) |
+| `MAKE_LEAD_KEY` | Secret key for Make.com Webhook authentication |
 | `WEBHOOK_URL` | Destination endpoint for lead delivery |
 | `WEBHOOK_BATCH_SIZE` | Number of leads sent per batch |
-| `LOG_LEVEL` | Logging verbosity (`DEBUG` / `INFO` / `ERROR`) |
+| `SCRAPER_TIMEOUT` | HTTP request timeout in seconds |
+| `SCRAPER_RETRIES` | Number of retry attempts on request failure |
+| `SCRAPER_MAX_WORKERS` | Thread pool size for parallel scraping |
+| `SERPER_MAX_RESULTS` | Max results returned per Serper API call |
+
+---
+
+## 🔄 CI/CD
+
+The project uses **GitHub Actions** for continuous integration. The pipeline runs on every push and pull request to `main` / `master`.
+
+```
+push / PR → Ruff (lint) → Pyright (type check) → Pytest
+```
+
+| Step | Tool | Purpose |
+|---|---|---|
+| Lint | Ruff | Code style and import checks |
+| Type Check | Pyright (strict) | Static type safety across `app/` |
+| Tests | Pytest | Functional test suite with isolated env credentials |
+
+CI config: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 ---
 
@@ -180,7 +196,7 @@ A ready-to-use blueprint is available in the `/automation` directory.
    - **Hunter.io** (Domain Search)
    - **OpenAI** (GPT-4o-mini)
    - **Instantly** (Lead Import)
-4. Replace all `YOUR_...` placeholders with your actual IDs (see table below)
+4. Replace all `YOUR_...` placeholders with your actual IDs (see tables below)
 5. Copy the generated Webhook URL from Module 1 → paste it into your `.env` as `WEBHOOK_URL`
 
 ---
@@ -235,26 +251,66 @@ For **Module 11 (Create a Record)** to function correctly, your Airtable table m
 
 ![Pipeline Overview](automation/Scenario_IMG.jpg)
 
+> For a full component breakdown and data flow diagram, see [architecture.md](architecture.md).
+
 ---
 
 ## 📂 Project Structure
 
 ```text
 .
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # GitHub Actions CI pipeline
 ├── app/
-│   ├── scraper/          # Scraping modules (client, parser, logic)
-│   ├── sender/           # Webhook sending logic
-│   ├── utils/            # Utilities and logging
-│   ├── config.py         # Environment configuration
-│   └── database.py       # Database interaction layer
-├── automation/           # Make.com blueprints and assets
+│   ├── scraper/                  # Scraping modules (client, parser, logic)
+│   ├── sender/                   # Webhook sending logic
+│   ├── utils/                    # Utilities and logging
+│   ├── config.py                 # Environment configuration
+│   └── database.py               # Database interaction layer
+├── automation/                   # Make.com blueprints and assets
 │   ├── Make.json
 │   ├── outreach_pipeline.json
 │   └── Scenario_IMG.jpg
-├── main.py               # CLI entry point
-├── requirements.txt      # Project dependencies
-└── .env.example          # Environment variable template
+├── tests/
+│   └── test_suite.py             # Pytest test suite
+├── main.py                       # CLI entry point
+├── pyproject.toml                # Project metadata and dependencies
+├── architecture.md               # Data flow architecture and component docs
+└── .env.example                  # Environment variable template
 ```
+
+---
+
+## 🏗 Why This Architecture?
+
+LeadFlow is intentionally built around **simplicity of deployment** over distributed complexity.
+
+**SQLite over Redis or PostgreSQL:**
+- Zero infrastructure overhead — no separate server process to manage or monitor.
+- The scraping pipeline is inherently sequential per session; concurrent write pressure is minimal.
+- A single `.db` file is trivially portable, backupable, and inspectable without tooling.
+- Redis would add operational complexity (persistence config, eviction policy, connection pooling) with no meaningful throughput gain at this scale.
+
+**Python-side data normalization over Make.com:**
+- Make.com charges per **operation**. Pushing raw, unnormalized data and transforming it inside a scenario burns operations on every field mapping, filter, and iterator.
+- Normalizing in Python before the Webhook call means Make.com receives a clean, flat payload — one HTTP module fires, one Airtable record is created. No intermediate transformations.
+- Business logic stays in version-controlled code, not locked inside a visual no-code scenario that is harder to diff, test, or roll back.
+
+---
+
+## ⚖️ Trade-offs & Production Readiness
+
+| Dimension | Current State | Production Consideration |
+|---|---|---|
+| **Concurrency** | Multi-threaded scraping per run | No distributed task queue (Celery / RQ) — single-machine only |
+| **Database** | SQLite | Not suitable for multi-process writes or horizontal scaling |
+| **Error Recovery** | Make.com Break directives + retry | No dead-letter queue for leads that permanently fail |
+| **Observability** | File-based logging | No structured log aggregation (Datadog, Loki, etc.) |
+| **Rate Limiting** | Timeout config via `.env` | No adaptive back-off or proxy rotation built in |
+| **Auth** | API keys in `.env` | Secrets manager (Vault, AWS SSM) recommended for team deployments |
+
+> **Bottom line:** LeadFlow is optimized for **solo operators and small teams** running scheduled scraping jobs on a single machine. It is not designed for high-frequency, multi-tenant, or real-time production environments without the additions noted above.
 
 ---
 
