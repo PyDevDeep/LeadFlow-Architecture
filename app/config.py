@@ -6,17 +6,16 @@ load_dotenv()
 
 
 class Settings:
-    """Проста конфігурація через os.getenv (MVP Style)"""
+    """Simple configuration via os.getenv (MVP style)."""
 
     # Database
-    # Змінюємо database_url на шлях до файлу для sqlite3
     DATABASE_PATH = os.getenv("DATABASE_PATH", "leads.db")
 
     # Scraper
     SCRAPER_TIMEOUT = int(os.getenv("SCRAPER_TIMEOUT", 30))
     SCRAPER_RETRIES = int(os.getenv("SCRAPER_RETRIES", 3))
     SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
-    # Ліміти та потоки
+    # Concurrency limits
     SCRAPER_MAX_WORKERS = int(os.getenv("SCRAPER_MAX_WORKERS", 3))
     SERPER_MAX_RESULTS = int(os.getenv("SERPER_MAX_RESULTS", 5))
     # Webhook
@@ -30,11 +29,11 @@ class Settings:
     REGEX_PHONE_UA = r"(?:\+?380|0)\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}"
     REGEX_PHONE_US = r"(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}"
 
-    # Активний патерн, який використовує ScrapeManager
+    # Active pattern used by ScrapeManager
     ACTIVE_PHONE_REGEX = REGEX_PHONE_UA
     JUNK_NAMES = {"home", "welcome", "untitled", "index", "test"}
 
-    # ЖОРСТКИЙ ЧОРНИЙ СПИСОК (Агрегатори, соцмережі, блоги)
+    # Hard domain blacklist (aggregators, social media, blogs)
     DOMAIN_BLACKLIST = {
         "medium.com",
         "linkedin.com",
@@ -55,5 +54,4 @@ class Settings:
     }
 
 
-# Створюємо екземпляр для імпорту в інші модулі
 settings = Settings()

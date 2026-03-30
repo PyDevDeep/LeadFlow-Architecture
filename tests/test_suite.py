@@ -17,12 +17,12 @@ from app.sender.worker import handle_retry, process_batch
 from app.utils.validators import clean_company_name, clean_phone
 
 # ==========================================
-# 1. ТЕСТИ УТИЛІТ (app.utils.validators)
+# 1. VALIDATOR TESTS (app.utils.validators)
 # ==========================================
 
 
 class TestValidators:
-    """Тестування чистих функцій. Ризик: некоректна нормалізація даних перед записом в БД."""
+    """Tests for pure validator functions. Risk: incorrect normalization before DB write."""
 
     @pytest.mark.parametrize(
         "raw, expected",
@@ -56,14 +56,13 @@ class TestValidators:
 
 
 # ==========================================
-# 2. ТЕСТИ МЕНЕДЖЕРА (app.scraper.manager)
+# 2. SCRAPE MANAGER TESTS (app.scraper.manager)
 # ==========================================
 
 
 class ExposedScrapeManager(ScrapeManager):
     """
-    Допоміжний клас-нащадок для легального доступу до захищених методів
-    в умовах суворого статичного аналізу Pylance.
+    Subclass that exposes protected methods for testing without Pylance violations.
     """
 
     def public_extract_domain(self, url: str) -> str:
@@ -88,15 +87,13 @@ class ExposedScrapeManager(ScrapeManager):
 
 
 class TestScrapeManager:
-    """Тестування бізнес-логіки. Ризик: пропуск валідних лідів або збереження сміття."""
+    """Tests for business logic. Risk: skipping valid leads or saving garbage."""
 
     @pytest.fixture
     def manager(self) -> ExposedScrapeManager:
-        # Використовуємо наш підклас замість оригінального менеджера
         return ExposedScrapeManager()
 
     def test_extract_domain(self, manager: ExposedScrapeManager) -> None:
-        # Тепер ми викликаємо публічні методи-обгортки
         assert (
             manager.public_extract_domain("https://www.google.com/path") == "google.com"
         )
@@ -113,7 +110,7 @@ class TestScrapeManager:
     ) -> None:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.rowcount = 1  # Покриття рядків 75-76: новий лід (rowcount > 0)
+        mock_cursor.rowcount = 1
         mock_conn.execute.return_value = mock_cursor
         mock_db.return_value.__enter__.return_value = mock_conn
 
@@ -130,10 +127,10 @@ class TestScrapeManager:
     def test_save_lead_duplicate_ignored(
         self, mock_db: MagicMock, manager: ExposedScrapeManager
     ) -> None:
-        """Покриття рядків 77-78: INSERT OR IGNORE не вставив (дублікат домену)."""
+        """INSERT OR IGNORE silently skips a duplicate domain."""
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.rowcount = 0  # Дублікат — БД проігнорувала INSERT
+        mock_cursor.rowcount = 0
         mock_conn.execute.return_value = mock_cursor
         mock_db.return_value.__enter__.return_value = mock_conn
 
@@ -157,7 +154,6 @@ class TestScrapeManager:
         manager: ExposedScrapeManager,
     ) -> None:
         mock_maps_resp = MagicMock()
-        # Імітуємо один валідний і один сміттєвий домен (з чорного списку)
         place1 = MagicMock(
             website="http://good.com", title="Good", phoneNumber="123", description=""
         )
@@ -169,7 +165,6 @@ class TestScrapeManager:
 
         manager.run_maps_pipeline("query")
 
-        # Збереження має викликатись тільки для good.com
         mock_save_lead.assert_called_once()
         assert mock_save_lead.call_args[0][0] == "good.com"
 
@@ -196,30 +191,26 @@ class TestScrapeManager:
 
     @patch("app.scraper.manager.settings")
     def test_manager_regex_compile_error(self, mock_settings: MagicMock) -> None:
-        # Штучно ламаємо регулярний вираз для перевірки критичної зупинки
+        # Intentionally broken regex to verify critical shutdown
         mock_settings.ACTIVE_PHONE_REGEX = "*[invalid"
         with pytest.raises(SystemExit):
             ScrapeManager()
 
     def test_is_blacklisted_empty(self, manager: ExposedScrapeManager) -> None:
-        # Порожній домен має вважатися чорним списком згідно з контекстом
         assert manager.public_is_blacklisted("") is True
 
     def test_extract_phone_empty(self, manager: ExposedScrapeManager) -> None:
         assert manager.public_extract_phone_from_text(None) == ""
 
     def test_save_lead_empty_name(self, manager: ExposedScrapeManager) -> None:
-        # Без домену або імені запис не повинен відбуватися
         manager.public_save_lead("", "", "url", "1", "D", "maps")
 
     @patch("app.scraper.manager.get_db_connection")
     def test_save_lead_db_exception(
         self, mock_db: MagicMock, manager: ExposedScrapeManager
     ) -> None:
-        # Імітуємо падіння БД під час збереження
         mock_db.return_value.__enter__.side_effect = Exception("DB Error")
         manager.public_save_lead("test.com", "Name", "url", "1", "D", "maps")
-        # Тест пройде, якщо виключення коректно перехоплено і не "поклало" програму
 
     @patch("app.scraper.manager.ScrapeManager._save_lead")
     @patch("app.scraper.manager.SerperClient.search")
@@ -235,7 +226,7 @@ class TestScrapeManager:
         mock_search.return_value = mock_search_resp
 
         manager.run_search_pipeline("query")
-        mock_save.assert_not_called()  # Домен з чорного списку пропущено
+        mock_save.assert_not_called()
 
     @patch("app.scraper.manager.SerperClient.scrape")
     @patch("app.scraper.manager.ScrapeManager._save_lead")
@@ -245,7 +236,6 @@ class TestScrapeManager:
         mock_scrape: MagicMock,
         manager: ExposedScrapeManager,
     ) -> None:
-        # Перевірка мультипоточного скрейпера
         targets = [
             {"url": "http://good.com", "name": "Good"},
             {"url": "http://medium.com"},
@@ -258,23 +248,18 @@ class TestScrapeManager:
 
         manager.run_deep_scrape(targets, source_method="hybrid", max_workers=1)
 
-        # Перевіряємо, що збереження викликано тільки для валідного домену
         mock_save.assert_called_once()
 
     @patch("app.scraper.manager.get_db_connection")
     def test_save_lead_execute_exception(
         self, mock_db: MagicMock, manager: ExposedScrapeManager
     ) -> None:
-        # Покриття рядків 75-77: Помилка збереження
-        # Найпростіший спосіб викликати виключення в блоці try - зламати сам виклик get_db_connection
         mock_db.side_effect = Exception("DB Connect Error")
 
         manager.public_save_lead(
             "test.com", "Test", "http://test.com", "123", "", "maps"
         )
 
-        # Якщо тест не впав з помилкою Exception("DB Connect Error"),
-        # значить блок except Exception as e успішно її перехопив.
         assert mock_db.called
 
     @patch("app.scraper.manager.SerperClient.scrape")
@@ -285,22 +270,13 @@ class TestScrapeManager:
         mock_scrape: MagicMock,
         manager: ExposedScrapeManager,
     ) -> None:
-        # Покриття рядків 145-183: Усі варіанти "смерті" потоку
+        """Cover all thread-exit branches in run_deep_scrape."""
         targets: list[dict[str, str]] = [
-            {
-                "url": "",
-                "name": "A",
-            },  # 145-146: Пустий URL → пустий домен → потік гине
-            {"url": "http://dup.com", "name": "B"},  # Валідний запис
-            {"url": "http://dup.com", "name": "C"},  # 156-159: Дублікат сесії
-            {
-                "url": "http://.xyz",
-                "name": "home",
-            },  # 170-173: Пусте ім'я (home відкидається, .xyz стає пустим)
-            {
-                "url": "http://notext.com",
-                "name": "E",
-            },  # 180-183: API повернуло пустий текст
+            {"url": "", "name": "A"},           # empty URL → empty domain → exit
+            {"url": "http://dup.com", "name": "B"},  # valid entry
+            {"url": "http://dup.com", "name": "C"},  # session duplicate → exit
+            {"url": "http://.xyz", "name": "home"},  # name rejected, domain empty → exit
+            {"url": "http://notext.com", "name": "E"},  # API returned empty text → exit
         ]
 
         mock_scrape_empty = MagicMock(text=None, markdown=None, metadata=None)
@@ -317,28 +293,26 @@ class TestScrapeManager:
 
         manager.run_deep_scrape(targets, source_method="hybrid", max_workers=1)
 
-        # До БД має дійти рівно ОДИН запис ("http://dup.com", "B")
         assert mock_save.call_count == 1
 
     @patch("app.scraper.manager.SerperClient.scrape")
     def test_run_deep_scrape_worker_exception(
         self, mock_scrape: MagicMock, manager: ExposedScrapeManager
     ) -> None:
-        # Покриття рядків 204-205: Перехоплення виключень усередині ThreadPoolExecutor
+        """Exception inside a thread should be caught and logged, not crash the app."""
         mock_scrape.side_effect = Exception("Worker Crash")
         targets = [{"url": "http://crash.com", "name": "Crash"}]
 
         manager.run_deep_scrape(targets, source_method="hybrid", max_workers=1)
-        # Має просто залогувати помилку, а не "покласти" весь додаток
 
 
 # ==========================================
-# 3. ТЕСТИ КЛІЄНТА API (app.scraper.serper_client)
+# 3. SERPER CLIENT TESTS (app.scraper.serper_client)
 # ==========================================
 
 
 class TestSerperClient:
-    """Тестування HTTP клієнта. Ризик: падіння при нестандартних відповідях API."""
+    """Tests for the HTTP client. Risk: crashes on unexpected API responses."""
 
     @patch("app.scraper.serper_client.requests.post")
     def test_maps_success(self, mock_post: MagicMock) -> None:
@@ -393,7 +367,6 @@ class TestSerperClient:
 
     @patch("app.scraper.serper_client.settings")
     def test_no_api_key(self, mock_settings: MagicMock) -> None:
-        # Семантично перевіряємо обробку відсутнього ключа
         mock_settings.SERPER_API_KEY = ""
         client = SerperClient()
         assert client.headers.get("X-API-KEY") == ""
@@ -414,12 +387,12 @@ class TestSerperClient:
 
 
 # ==========================================
-# 4. ТЕСТИ ВОРКЕРА (app.sender.worker)
+# 4. SENDER WORKER TESTS (app.sender.worker)
 # ==========================================
 
 
 class TestSenderWorker:
-    """Тестування відправки webhook. Ризик: втрата даних при таймаутах сервера."""
+    """Tests for webhook delivery. Risk: data loss on server timeouts."""
 
     @patch("app.sender.worker.get_leads_for_processing")
     @patch("app.sender.worker.requests.post")
@@ -454,7 +427,6 @@ class TestSenderWorker:
         mock_post: MagicMock,
         mock_get_leads: MagicMock,
     ) -> None:
-        # Явна типізація для уникнення reportUnknownVariableType
         leads: list[dict[str, Any]] = [
             {
                 "id": 1,
@@ -484,7 +456,6 @@ class TestSenderWorker:
     def test_handle_retry_logic(
         self, mock_time: MagicMock, mock_update: MagicMock
     ) -> None:
-        # Явна типізація словників
         leads_continue: list[dict[str, Any]] = [{"id": 1, "retry_count": 0}]
         leads_fail: list[dict[str, Any]] = [{"id": 2, "retry_count": 4}]
 
@@ -498,7 +469,7 @@ class TestSenderWorker:
     @patch("app.sender.worker.get_leads_for_processing")
     def test_process_batch_empty(self, mock_get: MagicMock) -> None:
         mock_get.return_value = []
-        process_batch()  # Тест покриває вихід, коли черга порожня
+        process_batch()
 
     @patch("app.sender.worker.get_leads_for_processing")
     @patch("app.sender.worker.requests.post")
@@ -543,7 +514,7 @@ class TestSenderWorker:
         ]
         mock_get.return_value = leads
         mock_post.side_effect = Exception("Critical Error")
-        process_batch()  # Має перехопити і залогувати
+        process_batch()
 
     @patch("app.sender.worker.get_db_connection")
     def test_update_lead_status(self, mock_db: MagicMock) -> None:
@@ -572,7 +543,7 @@ class TestSenderWorker:
     def test_process_batch_http_400(
         self, mock_update: MagicMock, mock_post: MagicMock, mock_get: MagicMock
     ) -> None:
-        # Покриття рядків 62-63: HTTP помилки, які не входять у список "тимчасових" (напр. 400 Bad Request)
+        """Non-retryable HTTP errors (e.g. 400) should mark leads as failed immediately."""
         leads: list[dict[str, Any]] = [
             {
                 "id": 1,
@@ -594,44 +565,37 @@ class TestSenderWorker:
         )
 
         process_batch()
-        # Статус має змінитись на failed без передачі у функцію handle_retry
         mock_update.assert_called_once_with(1, "failed")
 
     @patch("app.sender.worker.get_db_connection")
     def test_worker_db_exceptions(self, mock_db: MagicMock) -> None:
-        # Покриття рядків 117-118 та 142-144: Падіння БД під час читання/запису
+        """DB errors during read/write should be caught and not crash the worker."""
         import sqlite3
 
         from app.sender.worker import get_leads_for_processing, update_lead_status
 
         mock_db.return_value.__enter__.side_effect = sqlite3.Error("DB Error")
 
-        # Перевірка 117-118
-        update_lead_status(1, "success")  # Має коректно перехопити
+        update_lead_status(1, "success")
 
-        # Перевірка 142-144
         result = get_leads_for_processing(10)
-        assert result == []  # При помилці читання повертаємо пустий список
+        assert result == []
 
     def test_worker_main_block(self) -> None:
-        # Покриття рядка 148: if __name__ == "__main__":
+        """The __main__ block should run process_batch safely on an empty queue."""
         import runpy
 
-        # Ми дозволяємо модулю реально запуститися через runpy,
-        # але мокаємо get_leads_for_processing так, щоб черга була порожньою.
-        # Таким чином код просто залогує "Черга порожня" і безпечно завершиться.
         with patch("app.sender.worker.get_leads_for_processing", return_value=[]):
             runpy.run_module("app.sender.worker", run_name="__main__")
-            # Відсутність виключень означає, що блок виконався успішно
 
 
 # ==========================================
-# 5. ТЕСТИ БАЗИ ДАНИХ (app.database)
+# 5. DATABASE TESTS (app.database)
 # ==========================================
 
 
 class TestDatabase:
-    """Тестування взаємодії зі SQLite. Ризик: витоки з'єднань або помилки ініціалізації."""
+    """Tests for SQLite interaction. Risk: connection leaks or init failures."""
 
     @patch("app.database.sqlite3.connect")
     def test_get_db_connection(self, mock_connect: MagicMock) -> None:
@@ -641,7 +605,7 @@ class TestDatabase:
         with get_db_connection() as conn:
             assert conn == mock_conn
 
-        # Перевіряємо, що з'єднання гарантовано закривається (блок finally)
+        # Verify the connection is guaranteed to close (finally block)
         mock_conn.close.assert_called_once()
 
     @patch("app.database.get_db_connection")
@@ -656,6 +620,6 @@ class TestDatabase:
 
     @patch("app.database.get_db_connection")
     def test_init_db_error(self, mock_get_db: MagicMock) -> None:
-        # Перевірка обробки помилок (sqlite3.Error)
+        """sqlite3.Error during init should be logged, not raised."""
         mock_get_db.return_value.__enter__.side_effect = sqlite3.Error("Test DB Error")
-        init_db()  # Не повинно викликати виключення, бо помилка логується
+        init_db()

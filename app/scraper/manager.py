@@ -10,7 +10,7 @@ from app.utils.validators import clean_company_name, clean_phone
 
 
 class ScrapeManager:
-    """Оркестратор процесів лідогенерації"""
+    """Orchestrator for lead generation pipelines."""
 
     def __init__(self):
         self.client = SerperClient()
@@ -19,22 +19,24 @@ class ScrapeManager:
         try:
             self.phone_regex = re.compile(settings.ACTIVE_PHONE_REGEX)
         except re.error as e:
-            logger.critical(f"Помилка компіляції ACTIVE_PHONE_REGEX: {e}")
-            raise SystemExit("Невалідний регулярний вираз у конфігурації.")
+            logger.critical(f"Failed to compile ACTIVE_PHONE_REGEX: {e}")
+            raise SystemExit("Invalid regex in configuration.")
 
     def _extract_domain(self, url: str) -> str:
+        """Extract the bare domain (no www) from a URL."""
         if not url:
             return ""
         clean_url = url if url.startswith(("http://", "https://")) else f"http://{url}"
         return urlparse(clean_url).netloc.removeprefix("www.")
 
     def _is_blacklisted(self, domain: str) -> bool:
-        """Перевіряє, чи містить домен заборонені слова з чорного списку"""
+        """Return True if the domain matches any entry in the blacklist."""
         if not domain:
             return True
         return any(bad_domain in domain for bad_domain in settings.DOMAIN_BLACKLIST)
 
     def _extract_phone_from_text(self, text: str | None) -> str:
+        """Search text for a phone number and return it normalized, or empty string."""
         if not text:
             return ""
         match = self.phone_regex.search(text)
@@ -49,20 +51,17 @@ class ScrapeManager:
         description: str,
         source_method: str,
     ) -> None:
-        """Оновлений метод збереження з жорстким фільтром якості ліда"""
-        # Базові структурні вимоги
+        """Persist a lead to the DB, rejecting entries with no phone and no description."""
         if not domain or not name:
             return
 
-        # ЖОРСТКИЙ ФІЛЬТР ЯКОСТІ: Лід має сенс, лише якщо є телефон АБО опис
+        # A lead is only useful if it has a phone or a description
         if not phone and not description:
-            # Використовуємо debug, щоб не спамити консоль мертвими лідами,
-            # але мати змогу їх відстежити при потребі
-            logger.debug(f"[DB] Лід відхилено (пустий телефон та опис): {domain}")
+            logger.debug(f"[DB] Lead rejected (no phone or description): {domain}")
             return
 
         query = """
-            INSERT OR IGNORE INTO leads_queue (domain, name, website, phone, description, source_method) 
+            INSERT OR IGNORE INTO leads_queue (domain, name, website, phone, description, source_method)
             VALUES (?, ?, ?, ?, ?, ?)
         """
         try:
@@ -72,24 +71,24 @@ class ScrapeManager:
                 )
                 conn.commit()
                 if cursor.rowcount > 0:
-                    logger.info(f"[DB] Новий лід ({source_method}): {domain}")
+                    logger.info(f"[DB] New lead ({source_method}): {domain}")
                 else:
-                    logger.info(f"[DB] Дублікат проігноровано базою: {domain}")
+                    logger.info(f"[DB] Duplicate ignored by DB: {domain}")
         except Exception as e:
-            logger.error(f"[DB] Помилка збереження {domain}: {e}")
+            logger.error(f"[DB] Save error for {domain}: {e}")
 
-    # --- СЦЕНАРІЙ 1: MAPS ---
+    # --- PIPELINE 1: MAPS ---
     def run_maps_pipeline(self, query: str) -> None:
-        logger.info(f"Запуск Maps пайплайну: {query}")
+        """Run the Maps pipeline: fetch local businesses and save as leads."""
+        logger.info(f"Starting Maps pipeline: {query}")
         response = self.client.maps(query)
         places = response.places[: settings.SERPER_MAX_RESULTS]
 
         for place in places:
             domain = self._extract_domain(place.website or "")
 
-            # ФІЛЬТР ЧОРНОГО СПИСКУ
             if self._is_blacklisted(domain):
-                logger.debug(f"[TRACE] Maps пропустив сміттєвий домен: {domain}")
+                logger.debug(f"[TRACE] Maps skipped blacklisted domain: {domain}")
                 continue
 
             name = clean_company_name(place.title)
@@ -102,60 +101,54 @@ class ScrapeManager:
                     domain, name, place.website or "", phone, description, "maps"
                 )
 
-    # --- СЦЕНАРІЙ 2: SEARCH (Поверхневий збір) ---
+    # --- PIPELINE 2: SEARCH (shallow collection) ---
     def run_search_pipeline(self, query: str) -> None:
-        logger.info(f"Запуск Search пайплайну: {query}")
+        """Run the Search pipeline: fetch organic results and save as leads."""
+        logger.info(f"Starting Search pipeline: {query}")
         response = self.client.search(query)
         organic_results = response.organic[: settings.SERPER_MAX_RESULTS]
 
         for item in organic_results:
             domain = self._extract_domain(item.link)
 
-            # ФІЛЬТР ЧОРНОГО СПИСКУ
             if self._is_blacklisted(domain):
-                logger.debug(f"[TRACE] Search пропустив сміттєвий домен: {domain}")
+                logger.debug(f"[TRACE] Search skipped blacklisted domain: {domain}")
                 continue
 
             raw_title = item.title.split("-")[0].split("|")[0].strip()[:49]
             name = clean_company_name(raw_title) or domain.split(".")[0].capitalize()
             phone = self._extract_phone_from_text(item.snippet)
-            # Беремо сніпет з органічної видачі[cite: 4]
             description = item.snippet or ""
 
             if domain and name:
                 self._save_lead(domain, name, item.link, phone, description, "search")
 
-    # --- СЦЕНАРІЇ 3 та 4: DEEP SCRAPE (Глибокий пошук з пулом потоків) ---
+    # --- PIPELINES 3 & 4: DEEP SCRAPE (threaded) ---
     def run_deep_scrape(
         self,
         targets: list[dict[str, str]],
         source_method: str = "hybrid",
         max_workers: int = settings.SCRAPER_MAX_WORKERS,
     ) -> None:
-        """Додано параметр source_method (за замовчуванням hybrid)"""
-        logger.info(f"Запуск Deep Scrape ({source_method}) для {len(targets)} цілей")
+        """Scrape a list of target URLs in parallel and save results as leads."""
+        logger.info(f"Starting Deep Scrape ({source_method}) for {len(targets)} targets")
 
         def scrape_worker(target: dict[str, str]):
             url = target.get("url", "")
             domain = self._extract_domain(url)
 
-            logger.debug(f"[TRACE] Старт обробки: {domain}")
+            logger.debug(f"[TRACE] Starting processing: {domain}")
 
             if not domain:
-                logger.debug(f"[TRACE] Смерть потоку (Пустий домен): {url}")
+                logger.debug(f"[TRACE] Thread exit (empty domain): {url}")
                 return
 
-            # НОВИЙ ЖОРСТКИЙ БЛОК: ЧОРНИЙ СПИСОК
             if self._is_blacklisted(domain):
-                logger.debug(
-                    f"[TRACE] Смерть потоку (Домен у Чорному списку): {domain}"
-                )
+                logger.debug(f"[TRACE] Thread exit (blacklisted domain): {domain}")
                 return
 
             if domain in self.visited_domains:
-                logger.debug(
-                    f"[TRACE] Смерть потоку (Внутрішній дублікат сесії): {domain}"
-                )
+                logger.debug(f"[TRACE] Thread exit (session duplicate): {domain}")
                 return
 
             self.visited_domains.add(domain)
@@ -166,19 +159,18 @@ class ScrapeManager:
             name = clean_company_name(raw_title) or domain.split(".")[0].capitalize()
 
             if not name:
-                # ОЦЕ НАЙІМОВІРНІШИЙ ВБИВЦЯ
                 logger.debug(
-                    f"[TRACE] Смерть потоку (Неможливо згенерувати ім'я): {domain} з сирим '{raw_title}'"
+                    f"[TRACE] Thread exit (cannot generate name): {domain} from raw '{raw_title}'"
                 )
                 return
 
-            logger.debug(f"[TRACE] Початок HTTP скрейпінгу: {domain}")
+            logger.debug(f"[TRACE] Starting HTTP scrape: {domain}")
             scrape_resp = self.client.scrape(url)
             text_content = scrape_resp.markdown or scrape_resp.text
 
             if not text_content:
                 logger.warning(
-                    f"[TRACE] Serper повернув пустий текст (можливо 500/403 помилка): {domain}"
+                    f"[TRACE] Serper returned empty text (possible 500/403): {domain}"
                 )
                 return
 
@@ -192,7 +184,7 @@ class ScrapeManager:
                 )
 
             logger.debug(
-                f"[TRACE] Передача в БД: {domain} | Phone: '{phone}' | Desc: '{description[:10]}...'"
+                f"[TRACE] Saving to DB: {domain} | Phone: '{phone}' | Desc: '{description[:10]}...'"
             )
             self._save_lead(domain, name, url, phone, description, source_method)
 
@@ -202,4 +194,4 @@ class ScrapeManager:
                 try:
                     future.result()
                 except Exception as e:
-                    logger.error(f"Помилка в потоці скрейпінгу: {e}")
+                    logger.error(f"Scrape thread error: {e}")

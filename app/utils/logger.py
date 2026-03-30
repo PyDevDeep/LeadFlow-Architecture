@@ -2,35 +2,35 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-# Створюємо директорію для логів на рівні проекту
+# Create the log directory at the project root
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "app.log")
 
-# Єдиний формат для всіх виводів
+# Shared formatter for all handlers
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-# --- 1. ФАЙЛОВИЙ ХЕНДЛЕР (Глибокий аудит) ---
-# Ротація: макс 5 МБ на файл, зберігаємо 3 попередні копії
+# --- 1. FILE HANDLER (full audit trail) ---
+# Rotation: max 5 MB per file, keep 3 previous copies
 file_handler = RotatingFileHandler(
     LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
 )
 file_handler.setFormatter(formatter)
-# У файл ЗАВЖДИ пишемо DEBUG, щоб мати історію трасування при падіннях
+# Write DEBUG and above to file so crash traces are always available
 file_handler.setLevel(logging.DEBUG)
 
-# --- 2. КОНСОЛЬНИЙ ХЕНДЛЕР (Оперативний моніторинг) ---
+# --- 2. CONSOLE HANDLER (operational monitoring) ---
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
-# У консоль виводимо тільки INFO, WARNING, ERROR, CRITICAL
+# Only show INFO and above on the console
 console_handler.setLevel(logging.INFO)
 
-# --- ІНІЦІАЛІЗАЦІЯ ЛОГЕРА ---
+# --- LOGGER INITIALIZATION ---
 logger = logging.getLogger("scraper_app")
-# Загальний рівень логера має бути найнижчим, щоб пропускати все до хендлерів
+# Logger level must be the lowest so all records reach the handlers
 logger.setLevel(logging.DEBUG)
 
-# Уникаємо дублювання хендлерів при повторних імпортах модуля
+# Avoid duplicate handlers on repeated module imports
 if not logger.handlers:
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)

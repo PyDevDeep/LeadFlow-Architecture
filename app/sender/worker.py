@@ -11,15 +11,15 @@ from app.utils.logger import logger
 
 
 def process_batch() -> None:
-    logger.info("Пошук лідів для обробки...")
+    """Fetch a batch of pending leads and send them to the webhook."""
+    logger.info("Looking for leads to process...")
     leads = get_leads_for_processing(settings.WEBHOOK_BATCH_SIZE)
     if not leads:
-        logger.info("Черга порожня.")
+        logger.info("Queue is empty.")
         return
 
     payloads_to_send: list[dict[str, Any]] = []
 
-    # Дані вже валідовані та дедупліковані в БД. Просто формуємо JSON.
     for lead in leads:
         formatted_payload: dict[str, Any] = {
             "db_id": lead["id"],
@@ -27,8 +27,8 @@ def process_batch() -> None:
             "name": lead["name"],
             "website": lead["website"],
             "phone": lead["phone"],
-            "description": lead["description"],  # <--- ДОДАНО
-            "source_method": lead["source_method"],  # <--- ДОДАНО
+            "description": lead["description"],
+            "source_method": lead["source_method"],
         }
         payloads_to_send.append(formatted_payload)
 
@@ -50,11 +50,11 @@ def process_batch() -> None:
 
         for lead in leads:
             update_lead_status(lead["id"], "success")
-        logger.info(f"Успішно відправлено батч з {len(payloads_to_send)} лідів.")
+        logger.info(f"Successfully sent batch of {len(payloads_to_send)} leads.")
 
     except requests.exceptions.HTTPError as e:
         status = e.response.status_code if e.response is not None else 0
-        logger.error(f"HTTP помилка при відправці: {status}")
+        logger.error(f"HTTP error during send: {status}")
 
         if status in [429, 500, 502, 503, 504]:
             handle_retry(leads)
@@ -63,14 +63,15 @@ def process_batch() -> None:
                 update_lead_status(lead["id"], "failed")
 
     except requests.RequestException as e:
-        logger.error(f"Мережева помилка (Таймаут/З'єднання): {e}")
+        logger.error(f"Network error (timeout/connection): {e}")
         handle_retry(leads)
 
     except Exception as e:
-        logger.critical(f"Критична помилка воркера: {e}", exc_info=True)
+        logger.critical(f"Critical worker error: {e}", exc_info=True)
 
 
 def handle_retry(leads: list[dict[str, Any]]) -> None:
+    """Schedule leads for retry with exponential backoff, or mark as failed after 5 attempts."""
     current_time = int(time.time())
     for lead in leads:
         new_retry_count = lead["retry_count"] + 1
@@ -97,6 +98,7 @@ def update_lead_status(
     retry_count: int | None = None,
     next_retry: int | None = None,
 ) -> None:
+    """Update the status (and optionally retry metadata) of a lead in the DB."""
     query = "UPDATE leads_queue SET status = ?"
     params: list[Any] = [status]
 
@@ -119,17 +121,17 @@ def update_lead_status(
 
 
 def get_leads_for_processing(batch_size: int = 50) -> list[dict[str, Any]]:
+    """Atomically claim a batch of pending leads and return them for processing."""
     current_time = int(time.time())
 
-    # Додано description та source_method у RETURNING
     query = """
-        UPDATE leads_queue 
-        SET status = 'processing' 
+        UPDATE leads_queue
+        SET status = 'processing'
         WHERE id IN (
-            SELECT id 
-            FROM leads_queue 
+            SELECT id
+            FROM leads_queue
             WHERE status = 'pending' AND next_retry_at <= ?
-            ORDER BY id ASC 
+            ORDER BY id ASC
             LIMIT ?
         )
         RETURNING id, domain, name, website, phone, description, source_method, retry_count;

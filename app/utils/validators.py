@@ -4,37 +4,37 @@ from app.config import settings
 
 
 def clean_phone(raw_phone: str) -> str:
-    """Універсальна нормалізація телефонного номера."""
+    """Normalize a raw phone string to E.164 format, or return empty string if unrecognized."""
     if not raw_phone:
         return ""
 
-    # Залишаємо тільки цифри та плюс
+    # Keep only digits and leading plus
     digits = re.sub(r"[^\d+]", "", raw_phone)
 
-    # Якщо номер вже має коректний міжнародний формат
+    # Already in correct international format
     if digits.startswith("+"):
         return digits
 
-    # Нормалізація українських (відсутній плюс або починається з 0)
+    # Normalize Ukrainian numbers (missing plus or leading zero)
     if digits.startswith("380") and len(digits) == 12:
         return f"+{digits}"
     if digits.startswith("0") and len(digits) == 10:
         return f"+38{digits}"
 
-    # Нормалізація американських (відсутній плюс)
+    # Normalize US numbers (missing plus)
     if digits.startswith("1") and len(digits) == 11:
         return f"+{digits}"
 
-    # Якщо номер 10-значний американський (без 1 на початку)
+    # 10-digit US number without country code
     if len(digits) == 10 and not digits.startswith("0"):
         return f"+1{digits}"
 
-    # Фолбек для інших невідомих форматів
+    # Fallback for other unrecognized formats
     return digits
 
 
 def clean_company_name(name: str) -> str | None:
-    """Очищення назви компанії. Повертає None при провалі валідації."""
+    """Strip legal suffixes from a company name and validate length; return None on failure."""
     if not name:
         return None
     cleaned = re.sub(r"(?i)\b(inc|llc|ltd|corp)\b\.?", "", name)
