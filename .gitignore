@@ -49,7 +49,9 @@ Thumbs.db
 .coverage
 htmlcov/
 
+
 # Logs
+logs/
 *.log
 
 seed_test_data.py
@@ -57,4 +59,3 @@ collect_context.pyw
 project_context.txt
 debug_raw_search.json
 debug_serper.py
-test_urls.txt
