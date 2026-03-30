@@ -6,7 +6,7 @@
       "module": "gateway:CustomWebHook",
       "version": 1,
       "parameters": {
-        "hook": 2733218,
+        "hook": null,
         "maxResults": 1
       },
       "mapper": {},
@@ -387,25 +387,25 @@
           [
             {
               "a": "{{5.`__IMTLENGTH__`}}",
-              "o": "number:equal",
-              "b": "0"
+              "b": "0",
+              "o": "number:equal"
             }
           ]
         ]
       },
       "mapper": {
+        "qs": [
+          {
+            "key": "domain",
+            "value": "{{3.domain}}"
+          }
+        ],
         "url": "/v2/domain-search",
         "method": "GET",
         "headers": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          }
-        ],
-        "qs": [
-          {
-            "key": "domain",
-            "value": "{{3.domain}}"
           }
         ]
       },
@@ -415,35 +415,35 @@
           "y": -71
         },
         "restore": {
-          "parameters": {
-            "__IMTCONN__": {
-              "label": "Hunter_API",
-              "data": {
-                "scoped": "true",
-                "connection": "hunter"
-              }
-            }
-          },
           "expect": {
-            "url": {
-              "collapsed": true
-            },
-            "method": {
-              "mode": "chose",
-              "collapsed": true,
-              "label": "GET"
-            },
-            "headers": {
-              "mode": "chose",
-              "collapsed": true,
-              "items": [null]
-            },
             "qs": {
               "mode": "chose",
               "items": [null]
             },
+            "url": {
+              "collapsed": true
+            },
             "body": {
               "collapsed": true
+            },
+            "method": {
+              "mode": "chose",
+              "label": "GET",
+              "collapsed": true
+            },
+            "headers": {
+              "mode": "chose",
+              "items": [null],
+              "collapsed": true
+            }
+          },
+          "parameters": {
+            "__IMTCONN__": {
+              "data": {
+                "scoped": "true",
+                "connection": "hunter"
+              },
+              "label": "Hunter_API"
             }
           }
         },
@@ -473,8 +473,6 @@
           },
           {
             "name": "headers",
-            "type": "array",
-            "label": "Headers",
             "spec": [
               {
                 "name": "key",
@@ -486,12 +484,12 @@
                 "type": "text",
                 "label": "Value"
               }
-            ]
+            ],
+            "type": "array",
+            "label": "Headers"
           },
           {
             "name": "qs",
-            "type": "array",
-            "label": "Query String",
             "spec": [
               {
                 "name": "key",
@@ -503,7 +501,9 @@
                 "type": "text",
                 "label": "Value"
               }
-            ]
+            ],
+            "type": "array",
+            "label": "Query String"
           },
           {
             "name": "body",
@@ -519,8 +519,8 @@
           "version": 1,
           "parameters": {},
           "mapper": {
-            "retry": true,
             "count": "3",
+            "retry": true,
             "interval": "15"
           },
           "metadata": {
@@ -546,21 +546,21 @@
                 "name": "count",
                 "type": "uinteger",
                 "label": "Number of attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 10000
-                },
-                "required": true
+                  "max": 10000,
+                  "min": 1
+                }
               },
               {
                 "name": "interval",
                 "type": "uinteger",
                 "label": "Interval between attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 44640
-                },
-                "required": true
+                  "max": 44640,
+                  "min": 1
+                }
               }
             ]
           }
@@ -614,8 +614,8 @@
         "interface": [
           {
             "name": "final_email",
-            "label": "final_email",
-            "type": "any"
+            "type": "any",
+            "label": "final_email"
           }
         ],
         "advanced": true
@@ -651,11 +651,11 @@
         "messages": [
           {
             "role": "system",
-            "content": "SYSTEM_ROLE:\r\nYou are a professional B2B Sales Assistant. Your task is to write a neutral, one-sentence opening line for a cold email.\r\n\r\nCONTEXT:\r\nYou only have the Company Name: {{3.name}} and Domain: {{3.website}}. You CANNOT see the website content.\r\n\r\nGOAL:\r\nDraft a professional observation in English that acknowledges the company's existence without inventing fake facts or \"hallucinating\" news.\r\n\r\nCONSTRAINTS:\r\n1. Language: English ONLY (strictly prohibited to use any other language).\r\n2. Length: Maximum 12 words.\r\n3. No Hallucinations: Do not mention specific projects, news, awards, or services you haven't seen.\r\n4. Tone: Direct, professional, understated. No \"fluff\" or fake excitement.\r\n5. Forbidden Words: innovative, solution, unique, specialized, leader, optimization, help, offer, professional.\r\n6. Punctuation: No quotation marks in the output.\r\n\r\nOUTPUT_FORMAT:\r\nA single sentence in plain text.\r\n\r\nEXAMPLES:\r\nInput: Alpha Corp, alpha-corp.com\r\nOutput: I have been following the work Alpha Corp is doing recently.\r\nInput: Delta Tech, deltatech.io\r\nOutput: Your team's focus at deltatech.io caught my attention today."
+            "content": "SYSTEM_ROLE:\r\nYou are a professional B2B Sales Assistant. Your task is to write a neutral, one-sentence opening line for a cold email.\r\n\r\nCONTEXT:\r\nCompany Name: {{3.name}}\r\nDomain: {{3.website}}\r\nCompany Description: {{3.description}} (Note: This may be empty or brief).\r\n\r\nGOAL:\r\nDraft a professional observation in English. If a Description is provided, use one specific detail from it. If the Description is empty, acknowledge their general industry presence based on the Name/Domain.\r\n\r\nCONSTRAINTS:\r\n1. Language: English ONLY (strictly prohibited to use any other language).\r\n2. Length: Maximum 12 words.\r\n3. No Hallucinations: Do not mention projects or news NOT found in the provided Description. \r\n4. Tone: Direct, professional, understated. No \"fluff\" or fake excitement.\r\n5. Forbidden Words: innovative, solution, unique, specialized, leader, optimization, help, offer, professional.\r\n6. Punctuation: No quotation marks.\r\n\r\nOUTPUT_FORMAT:\r\nA single sentence in plain text.\r\n\r\nEXAMPLES:\r\nInput: Alpha Corp, alpha.com (Description: Provides drone mapping for farms)\r\nOutput: I noticed Alpha Corp focuses on drone mapping within the agricultural sector.\r\nInput: Delta Tech, deltatech.io (Description: empty)\r\nOutput: Your team's work at deltatech.io caught my attention today."
           },
           {
             "role": "user",
-            "content": "Company: {{3.name}}, Website: {{3.website}}. Write a personalized opening line in English.",
+            "content": "Company: {{3.name}}, Website: {{3.website}}, Description: {{3.description}}. Write a personalized opening line in English.",
             "imageDetail": "auto"
           }
         ],
@@ -731,9 +731,6 @@
                   "role": {
                     "mode": "chose",
                     "label": "Developer / System"
-                  },
-                  "content": {
-                    "collapsed": true
                   }
                 },
                 {
@@ -1434,8 +1431,8 @@
           "version": 1,
           "parameters": {},
           "mapper": {
-            "retry": true,
             "count": "3",
+            "retry": true,
             "interval": "15"
           },
           "metadata": {
@@ -1461,21 +1458,21 @@
                 "name": "count",
                 "type": "uinteger",
                 "label": "Number of attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 10000
-                },
-                "required": true
+                  "max": 10000,
+                  "min": 1
+                }
               },
               {
                 "name": "interval",
                 "type": "uinteger",
                 "label": "Interval between attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 44640
-                },
-                "required": true
+                  "max": 44640,
+                  "min": 1
+                }
               }
             ]
           }
@@ -1502,19 +1499,21 @@
       },
       "mapper": {
         "base": "YOUR_BASE_ID",
+        "typecast": false,
+        "useColumnId": false,
         "table": "YOUR_TABLE_ID",
         "record": {
-          "YOUR_FIELD_ID_PHONE": "{{3.phone}}",
-          "YOUR_FIELD_ID_EMAIL": "{{9.final_email}}",
-          "YOUR_FIELD_ID_COMPANY_NAME": "{{3.name}}",
-          "YOUR_FIELD_ID_URL": "{{3.website}}",
-          "YOUR_FIELD_ID_STATUSE": "Ready",
           "YOUR_FIELD_ID_DOMAIN": "{{3.domain}}",
           "YOUR_FIELD_ID_DB_ID": "{{3.db_id}}",
-          "YOUR_FIELD_ID_AI_RESPONCE": "{{14.result}}"
-        },
-        "typecast": false,
-        "useColumnId": false
+          "YOUR_FIELD_ID_COMPANY_NAME": "{{3.name}}",
+          "YOUR_FIELD_ID_URL": "{{3.website}}",
+          "YOUR_FIELD_ID_PHONE": "{{3.phone}}",
+          "YOUR_FIELD_ID_EMAIL": "{{9.final_email}}",
+          "YOUR_FIELD_ID_DESCRIPTION": "{{3.description}}",
+          "YOUR_FIELD_ID_SOURCE_METHOD": "{{3.source_method}}",
+          "YOUR_FIELD_ID_AI_RESPONSE": "{{14.result}}",
+          "YOUR_FIELD_ID_STATUS": "Ready"
+        }
       },
       "metadata": {
         "designer": {
@@ -1522,58 +1521,84 @@
           "y": -82
         },
         "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "Airtable_Production_Connection",
+              "data": {
+                "scoped": "true",
+                "connection": "airtable3"
+              }
+            }
+          },
           "expect": {
             "base": {
               "label": "Lead_Base"
             },
+            "typecast": {
+              "mode": "chose"
+            },
+            "useColumnId": {
+              "mode": "chose"
+            },
             "table": {
-              "label": "All_Lead",
               "nested": [
                 {
                   "name": "record",
                   "spec": [
                     {
                       "name": "YOUR_FIELD_ID_DOMAIN",
-                      "type": "text",
-                      "label": "Domain"
+                      "label": "Domain",
+                      "type": "text"
                     },
                     {
-                      "name": "YOUR_FIELD_ID_Source_ID",
-                      "type": "number",
-                      "label": "Source_ID"
+                      "name": "YOUR_FIELD_ID_DB_ID",
+                      "label": "Source_ID",
+                      "type": "number"
                     },
                     {
                       "name": "YOUR_FIELD_ID_COMPANY_NAME",
-                      "type": "text",
-                      "label": "Company Name"
+                      "label": "Company Name",
+                      "type": "text"
                     },
                     {
                       "name": "YOUR_FIELD_ID_URL",
-                      "type": "text",
-                      "label": "website"
+                      "label": "website",
+                      "type": "text"
                     },
                     {
                       "name": "YOUR_FIELD_ID_PHONE",
-                      "type": "text",
-                      "label": "Phone"
+                      "label": "Phone",
+                      "type": "text"
                     },
                     {
                       "name": "YOUR_FIELD_ID_EMAIL",
-                      "type": "text",
-                      "label": "Email"
+                      "label": "Email",
+                      "type": "text"
                     },
                     {
-                      "name": "YOUR_FIELD_ID_AI_RESPONCE",
+                      "name": "YOUR_FIELD_ID_DESCRIPTION",
+                      "label": "Description",
                       "type": "text",
-                      "label": "Personalized_Line",
                       "multiline": true
                     },
                     {
-                      "mode": "edit",
-                      "name": "YOUR_FIELD_ID_STATUSE",
-                      "type": "select",
+                      "name": "YOUR_FIELD_ID_SOURCE_METHOD",
+                      "label": "Source_Method",
+                      "type": "text"
+                    },
+                    {
+                      "name": "YOUR_FIELD_ID_AI_RESPONSE",
+                      "label": "Personalized_Line",
+                      "type": "text",
+                      "multiline": true
+                    },
+                    {
+                      "name": "YOUR_FIELD_ID_STATUS",
                       "label": "Status",
+                      "type": "select",
+                      "mode": "edit",
                       "dynamic": true,
+                      "validate": false,
                       "options": [
                         {
                           "label": "Done",
@@ -1583,36 +1608,19 @@
                           "label": "Ready",
                           "value": "Ready"
                         }
-                      ],
-                      "validate": false
+                      ]
                     }
                   ],
                   "type": "collection",
                   "label": "Record"
                 }
-              ]
+              ],
+              "label": "All_Lead"
             },
             "record": {
               "nested": {
-                "YOUR_FIELD_ID_STATUS": {
-                  "mode": "edit"
-                }
+                "YOUR_FIELD_ID_STATUS": { "mode": "edit" }
               }
-            },
-            "typecast": {
-              "mode": "chose"
-            },
-            "useColumnId": {
-              "mode": "chose"
-            }
-          },
-          "parameters": {
-            "__IMTCONN__": {
-              "data": {
-                "scoped": "true",
-                "connection": "airtable3"
-              },
-              "label": "Airtable_Production_Connection"
             }
           }
         },
@@ -1651,6 +1659,8 @@
           },
           {
             "name": "record",
+            "type": "collection",
+            "label": "Record",
             "spec": [
               {
                 "name": "YOUR_FIELD_ID_DOMAIN",
@@ -1658,7 +1668,7 @@
                 "label": "Domain"
               },
               {
-                "name": "YOUR_FIELD_ID_Source_ID",
+                "name": "YOUR_FIELD_ID_DB_ID",
                 "type": "number",
                 "label": "Source_ID"
               },
@@ -1683,19 +1693,27 @@
                 "label": "Email"
               },
               {
-                "name": "YOUR_FIELD_ID_AI_RESPONCE",
+                "name": "YOUR_FIELD_ID_DESCRIPTION",
+                "type": "text",
+                "label": "Description"
+              },
+              {
+                "name": "YOUR_FIELD_ID_SOURCE_METHOD",
+                "type": "text",
+                "label": "Source_Method"
+              },
+              {
+                "name": "YOUR_FIELD_ID_AI_RESPONSE",
                 "type": "text",
                 "label": "Personalized_Line"
               },
               {
-                "mode": "edit",
-                "name": "YOUR_FIELD_ID_STATUSE",
+                "name": "YOUR_FIELD_ID_STATUS",
                 "type": "select",
-                "label": "Status"
+                "label": "Status",
+                "mode": "edit"
               }
-            ],
-            "type": "collection",
-            "label": "Record"
+            ]
           }
         ],
         "interface": [
@@ -1711,44 +1729,55 @@
           },
           {
             "name": "Domain",
-            "type": "text",
-            "label": "Domain"
+            "label": "Domain",
+            "type": "text"
           },
           {
             "name": "Source_ID",
-            "type": "number",
-            "label": "Source_ID"
+            "label": "Source_ID",
+            "type": "number"
           },
           {
             "name": "Company Name",
-            "type": "text",
-            "label": "Company Name"
+            "label": "Company Name",
+            "type": "text"
           },
           {
             "name": "website",
-            "type": "text",
-            "label": "website"
+            "label": "website",
+            "type": "text"
           },
           {
             "name": "Phone",
-            "type": "text",
-            "label": "Phone"
+            "label": "Phone",
+            "type": "text"
           },
           {
             "name": "Email",
+            "label": "Email",
+            "type": "text"
+          },
+          {
+            "name": "Description",
+            "label": "Description",
             "type": "text",
-            "label": "Email"
+            "multiline": true
+          },
+          {
+            "name": "Source_Method",
+            "label": "Source_Method",
+            "type": "text"
           },
           {
             "name": "Personalized_Line",
-            "type": "text",
             "label": "Personalized_Line",
+            "type": "text",
             "multiline": true
           },
           {
             "name": "Status",
-            "type": "text",
-            "label": "Status"
+            "label": "Status",
+            "type": "text"
           }
         ]
       },
@@ -1816,17 +1845,17 @@
       },
       "filter": null,
       "mapper": {
-        "campaign": "YOUR_INSTANTLY_CAMPAIGN_ID",
         "email": "{{9.final_email}}",
+        "phone": "{{3.phone}}",
         "website": "{{3.website}}",
+        "campaign": "YOUR_INSTANTLY_CAMPAIGN_ID",
         "first_name": "{{3.name}} Team",
         "company_name": "{{3.name}}",
-        "phone": "{{3.phone}}",
-        "skip_if_in_workspace": true,
-        "skip_if_in_campaign": true,
         "skip_if_in_list": true,
-        "verify_leads_on_import": true,
-        "custom_variables": "{\"first_line\": \"{{replace(replace(trim(14.result); \"\"\"\"; \"'\"); newline; )}}\"}"
+        "custom_variables": "{\"first_line\": \"{{replace(replace(trim(14.result); \"\"\"\"; \"'\"); newline; )}}\"}",
+        "skip_if_in_campaign": true,
+        "skip_if_in_workspace": true,
+        "verify_leads_on_import": true
       },
       "metadata": {
         "designer": {
@@ -1834,73 +1863,73 @@
           "y": -86
         },
         "restore": {
-          "parameters": {
-            "__IMTCONN__": {
-              "collapsed": true,
-              "label": "instantly_test",
-              "data": {
-                "scoped": "true",
-                "connection": "instantly3"
-              }
-            }
-          },
           "expect": {
-            "campaign": {
-              "mode": "chose",
-              "collapsed": true,
-              "label": "Lead_Gen"
-            },
             "email": {
               "collapsed": true
             },
-            "personalization": {
-              "collapsed": true
-            },
-            "website": {
-              "collapsed": true
-            },
-            "last_name": {
-              "collapsed": true
-            },
             "phone": {
-              "collapsed": true
-            },
-            "lt_interest_status": {
-              "mode": "chose",
-              "collapsed": true,
-              "label": "Empty"
-            },
-            "pl_value_lead": {
               "collapsed": true
             },
             "list_id": {
               "mode": "chose",
               "collapsed": true
             },
+            "website": {
+              "collapsed": true
+            },
+            "campaign": {
+              "mode": "chose",
+              "label": "Lead_Gen",
+              "collapsed": true
+            },
+            "last_name": {
+              "collapsed": true
+            },
             "assigned_to": {
               "collapsed": true
             },
-            "skip_if_in_workspace": {
-              "mode": "chose",
+            "blocklist_id": {
               "collapsed": true
             },
-            "skip_if_in_campaign": {
-              "mode": "chose",
+            "pl_value_lead": {
+              "collapsed": true
+            },
+            "personalization": {
               "collapsed": true
             },
             "skip_if_in_list": {
               "mode": "chose",
               "collapsed": true
             },
-            "blocklist_id": {
+            "lt_interest_status": {
+              "mode": "chose",
+              "label": "Empty",
               "collapsed": true
             },
-            "verify_leads_for_lead_finder": {
+            "skip_if_in_campaign": {
+              "mode": "chose",
+              "collapsed": true
+            },
+            "skip_if_in_workspace": {
               "mode": "chose",
               "collapsed": true
             },
             "verify_leads_on_import": {
               "mode": "chose",
+              "collapsed": true
+            },
+            "verify_leads_for_lead_finder": {
+              "mode": "chose",
+              "collapsed": true
+            }
+          },
+          "parameters": {
+            "__IMTCONN__": {
+              "data": {
+                "scoped": "true",
+                "connection": "instantly3"
+              },
+              "label": "Instantly_Production_Connection",
               "collapsed": true
             }
           }
@@ -2023,8 +2052,8 @@
           "version": 1,
           "parameters": {},
           "mapper": {
-            "retry": true,
             "count": "3",
+            "retry": true,
             "interval": "15"
           },
           "metadata": {
@@ -2050,21 +2079,21 @@
                 "name": "count",
                 "type": "uinteger",
                 "label": "Number of attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 10000
-                },
-                "required": true
+                  "max": 10000,
+                  "min": 1
+                }
               },
               {
                 "name": "interval",
                 "type": "uinteger",
                 "label": "Interval between attempts",
+                "required": true,
                 "validate": {
-                  "min": 1,
-                  "max": 44640
-                },
-                "required": true
+                  "max": 44640,
+                  "min": 1
+                }
               }
             ]
           }
