@@ -21,8 +21,8 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["app"]
-py-modules = ["main", "seed_test_data", "debug_serper"]
+packages = { find = { where = ["."] } }
+py-modules = ["main"]
 
 [tool.setuptools.package-dir]
 app = "app"
